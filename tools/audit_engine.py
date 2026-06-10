@@ -150,6 +150,39 @@ def classify(row):
     return "REVIEW", "Industry blank — cannot judge", ind
 
 
+def reclassify_targets(real_type):
+    """Which amenity categories WOULD accept this real type? (the matrix, run in reverse).
+    Lets a mismatch be re-filed into its correct bucket instead of just deleted."""
+    if not real_type:
+        return []
+    out = []
+    for am, rule in RULES.items():
+        if any(a in real_type for a in rule["accept"]) and not any(r in real_type for r in rule["reject"]):
+            out.append(am)
+    return out
+
+
+def auto_decision(row):
+    """Full-automation policy (no human gate). Everything uncertain or changed is flagged
+    so it can be reviewed later, but nothing blocks. Returns a dict."""
+    verdict, reason, real = classify(row)
+    cur = amenity_of(row)
+    if verdict == "CORRECT":
+        return {"action": "keep", "target": cur, "verdict": verdict, "reason": reason, "note": "", "flagged": False}
+    if verdict == "REVIEW":
+        return {"action": "keep", "target": cur, "verdict": verdict, "reason": reason,
+                "note": "uncertain — kept by default", "flagged": True}
+    targets = [t for t in reclassify_targets(real) if t != cur]
+    if len(targets) == 1:
+        return {"action": "reclassify", "target": targets[0], "verdict": verdict, "reason": reason,
+                "note": f"re-filed {cur} -> {targets[0]}", "flagged": True}
+    if not targets:
+        return {"action": "remove", "target": None, "verdict": verdict, "reason": reason,
+                "note": "fits no amenity — removed", "flagged": True}
+    return {"action": "reclassify", "target": targets[0], "verdict": verdict, "reason": reason,
+            "note": f"ambiguous {targets}; chose {targets[0]}", "flagged": True}
+
+
 def main():
     import os
     from collections import Counter, defaultdict

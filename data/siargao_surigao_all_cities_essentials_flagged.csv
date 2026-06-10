@@ -1,0 +1,123 @@
+﻿Title,City,Filed As,Verdict,Action,Re-filed To,Reason,Note
+Cayale Covered Court,Britania Islands,gym,INCORRECT,remove,,type 'playground' is excluded from gym,fits no amenity — removed
+Dapa Ferry Terminal,Bucas Grande,currency exchange,REVIEW,keep,currency exchange,Industry blank — cannot judge,uncertain — kept by default
+Bucas Grande Foundation College,Bucas Grande,medical clinic,INCORRECT,remove,,type 'community college' is not a medical clinic,fits no amenity — removed
+Socorro Port,Bucas Grande,public wifi,REVIEW,keep,public wifi,Industry blank — cannot judge,uncertain — kept by default
+Buko Love Stop fresh co,Bucas Grande,convenience store,INCORRECT,remove,,type 'juice shop' is excluded from convenience store,fits no amenity — removed
+Bahay ng pogi,Bucas Grande,convenience store,INCORRECT,reclassify,public wifi,type 'coffee shop' is excluded from convenience store,re-filed convenience store -> public wifi
+J&T Express F-Socorro DHSP,Bucas Grande,transportation,INCORRECT,reclassify,post office,type 'courier service' is not a transportation,re-filed transportation -> post office
+Del Pilar Bridge,Bucas Grande,transportation,INCORRECT,remove,,type 'bridge' is not a transportation,fits no amenity — removed
+Kilometer Zero (Bucas Grande Island),Bucas Grande,tourist information,INCORRECT,remove,,name implies not a real tourist information,fits no amenity — removed
+Sohoton Cave,Bucas Grande,tourist information,INCORRECT,remove,,name implies not a real tourist information,fits no amenity — removed
+Horseshoe,Bucas Grande,tourist information,INCORRECT,remove,,type 'tourist attraction' is not a tourist information,fits no amenity — removed
+Kapihan Nature and Adventure Park,Bucas Grande,tourist information,INCORRECT,remove,,name implies not a real tourist information,fits no amenity — removed
+Sun Island,Bucas Grande,tourist information,INCORRECT,remove,,name implies not a real tourist information,fits no amenity — removed
+ISLA CASA,Bucas Grande,tourist information,INCORRECT,remove,,type 'tourist attraction' is not a tourist information,fits no amenity — removed
+Corregidor Shed,Bucas Grande,tourist information,INCORRECT,remove,,type 'tourist attraction' is not a tourist information,fits no amenity — removed
+Cansodmon private beach resort,Bucas Grande,tourist information,INCORRECT,remove,,name implies not a real tourist information,fits no amenity — removed
+"Santa Cruz, Socorro, Surigao del Norte",Bucas Grande,tourist information,INCORRECT,remove,,type 'tourist attraction' is not a tourist information,fits no amenity — removed
+Kayapaggan Beach,Bucas Grande,tourist information,INCORRECT,remove,,name implies not a real tourist information,fits no amenity — removed
+Tojoman Lagoon,Bucas Grande,tourist information,INCORRECT,remove,,name implies not a real tourist information,fits no amenity — removed
+Barbies Ice Cream,Cloud 9,convenience store,INCORRECT,remove,,type 'ice cream shop' is excluded from convenience store,fits no amenity — removed
+Casa Bianca Siargao,Cloud 9,laundry,INCORRECT,remove,,type 'lodging' is excluded from laundry,fits no amenity — removed
+Pops District Cloud 9 Siargao,Cloud 9,tourist information,INCORRECT,remove,,type 'tourist attraction' is not a tourist information,fits no amenity — removed
+Broken Board,Cloud 9,tourist information,REVIEW,keep,tourist information,Industry blank — cannot judge,uncertain — kept by default
+Surfing spot,Cloud 9,tourist information,INCORRECT,remove,,type 'tourist attraction' is not a tourist information,fits no amenity — removed
+Lexias Hostel Workspace Siargao,Cloud 9,coworking space,INCORRECT,remove,,type 'hostel' is excluded from coworking space,fits no amenity — removed
+Cebuana Lhuillier Pawnshop - General Luna,General Luna,atm,INCORRECT,remove,,type 'pawn shop' is excluded from atm,fits no amenity — removed
+Namnama Siargao,General Luna,atm,INCORRECT,remove,,type 'homestay' is not a atm,fits no amenity — removed
+Guiral store,General Luna,atm,INCORRECT,reclassify,convenience store,type 'store' is not a atm,re-filed atm -> convenience store
+GoldenBell Motorbike Rental - Siargao,General Luna,atm,INCORRECT,reclassify,scooter rental,type 'motorcycle rental agency' is not a atm,re-filed atm -> scooter rental
+Mlhullier Pawnshop,General Luna,currency exchange,REVIEW,keep,currency exchange,Industry blank — cannot judge,uncertain — kept by default
+Arugao Wellness and Spa Siargao,General Luna,currency exchange,INCORRECT,reclassify,massage spa,type 'spa' is excluded from currency exchange,re-filed currency exchange -> massage spa
+Lola's Rentals,General Luna,currency exchange,INCORRECT,reclassify,scooter rental,type 'scooter rental service' is excluded from currency exchange,re-filed currency exchange -> scooter rental
+Hibiscus Spa Siargao,General Luna,currency exchange,INCORRECT,reclassify,massage spa,type 'massage spa' is excluded from currency exchange,re-filed currency exchange -> massage spa
+Buddha Wellness,General Luna,gym,INCORRECT,reclassify,massage spa,type 'wellness center' is not a gym,re-filed gym -> massage spa
+LASA Siargao,General Luna,gym,INCORRECT,remove,,type 'restaurant' is excluded from gym,fits no amenity — removed
+Pepito’s Homestay,General Luna,gym,INCORRECT,remove,,type 'housing complex' is excluded from gym,fits no amenity — removed
+Kawili resort,General Luna,public wifi,INCORRECT,remove,,type '2-star hotel' is excluded from public wifi,fits no amenity — removed
+RGL Place,General Luna,public wifi,REVIEW,keep,public wifi,Industry blank — cannot judge,uncertain — kept by default
+YAMA APARTMENTS - Private Beachfront,General Luna,public wifi,INCORRECT,remove,,type '3-star hotel' is excluded from public wifi,fits no amenity — removed
+Bayay verde Siargao( pamilya homestay),General Luna,public wifi,INCORRECT,remove,,type 'bed & breakfast' is not a public wifi,fits no amenity — removed
+Amigo Inn,General Luna,public wifi,INCORRECT,remove,,name implies not a public wifi,fits no amenity — removed
+Triangle Palms Siargao,General Luna,public wifi,INCORRECT,remove,,type 'homestay' is not a public wifi,fits no amenity — removed
+RAGÙ,General Luna,convenience store,INCORRECT,remove,,type 'deli' is excluded from convenience store,fits no amenity — removed
+All About Cocoo - Coconut Desserts & Drinks,General Luna,convenience store,INCORRECT,remove,,type 'dessert shop' is excluded from convenience store,fits no amenity — removed
+Kambal Pandesal - Siargao,General Luna,convenience store,INCORRECT,remove,,type 'bakery' is excluded from convenience store,fits no amenity — removed
+JB Bakeshop,General Luna,convenience store,INCORRECT,remove,,type 'bakery' is excluded from convenience store,fits no amenity — removed
+"Bugnaw, Siargao's Froyo",General Luna,convenience store,INCORRECT,remove,,type 'frozen yogurt shop' is excluded from convenience store,fits no amenity — removed
+The Island Deli,General Luna,convenience store,INCORRECT,remove,,type 'deli' is excluded from convenience store,fits no amenity — removed
+White Beard Coffee Tawin Tawin Branch,General Luna,convenience store,INCORRECT,reclassify,public wifi,type 'coffee shop' is excluded from convenience store,re-filed convenience store -> public wifi
+Yoh! Siargao,General Luna,convenience store,INCORRECT,remove,,type 'frozen yogurt shop' is excluded from convenience store,fits no amenity — removed
+Wang's Bakeshop,General Luna,convenience store,INCORRECT,remove,,type 'bakery' is excluded from convenience store,fits no amenity — removed
+Chablets Quality Meats - Siargao Branch,General Luna,convenience store,INCORRECT,remove,,type 'butcher shop' is excluded from convenience store,fits no amenity — removed
+Siargao Shoppers,General Luna,convenience store,INCORRECT,remove,,type 'gift shop' is excluded from convenience store,fits no amenity — removed
+Siaruko Bread Station,General Luna,convenience store,INCORRECT,remove,,type 'bakery' is excluded from convenience store,fits no amenity — removed
+SOLAYA SIARGAO,General Luna,convenience store,INCORRECT,remove,,type 'homestay' is not a convenience store,fits no amenity — removed
+Kape.Ligay,General Luna,convenience store,INCORRECT,reclassify,public wifi,type 'coffee shop' is excluded from convenience store,re-filed convenience store -> public wifi
+Raw Shop & Fishing Siargao,General Luna,convenience store,INCORRECT,reclassify,public wifi,type 'coffee wholesaler' is excluded from convenience store,re-filed convenience store -> public wifi
+Baryo Brew Siargao,General Luna,convenience store,INCORRECT,reclassify,public wifi,type 'coffee shop' is excluded from convenience store,re-filed convenience store -> public wifi
+The Smoking Joint Vape Shop - San Sebastian,General Luna,convenience store,INCORRECT,remove,,type 'cigar shop' is excluded from convenience store,fits no amenity — removed
+Abukay Resort,General Luna,public restroom,INCORRECT,remove,,type 'resort hotel' is not a public restroom,fits no amenity — removed
+Morenta (Siargao Motorcycle and Car Rental),General Luna,public restroom,INCORRECT,reclassify,scooter rental,type 'scooter rental service' is not a public restroom,re-filed public restroom -> scooter rental
+TravelGo – Siargao Transport & Airport Transfer,General Luna,luggage storage,INCORRECT,reclassify,transportation,type 'transportation service' is not a luggage storage,re-filed luggage storage -> transportation
+The Whale's Tale,General Luna,luggage storage,INCORRECT,remove,,type 'souvenir store' is not a luggage storage,fits no amenity — removed
+NOGS SOUVENIR SHOP,General Luna,luggage storage,INCORRECT,remove,,type 'souvenir store' is not a luggage storage,fits no amenity — removed
+Panpinoy Bakeshop,General Luna,luggage storage,INCORRECT,remove,,type 'bakery' is not a luggage storage,fits no amenity — removed
+NALU.IAO SOUVENIR,General Luna,luggage storage,INCORRECT,remove,,type 'souvenir store' is not a luggage storage,fits no amenity — removed
+Catangnan Bridge,General Luna,luggage storage,INCORRECT,remove,,type 'bridge' is not a luggage storage,fits no amenity — removed
+MARCO SUITES SIARGAO,General Luna,luggage storage,INCORRECT,remove,,type 'serviced apartment' is not a luggage storage,fits no amenity — removed
+KMJ suites,General Luna,luggage storage,INCORRECT,remove,,type 'hotel' is not a luggage storage,fits no amenity — removed
+Raba Motorbike Rental,General Luna,luggage storage,INCORRECT,reclassify,scooter rental,type 'motorcycle rental agency' is not a luggage storage,re-filed luggage storage -> scooter rental
+Tropa Store Siargao,General Luna,luggage storage,INCORRECT,reclassify,convenience store,type 'clothing store' is not a luggage storage,re-filed luggage storage -> convenience store
+Kobe's Bite Dessert House,General Luna,luggage storage,INCORRECT,remove,,type 'restaurant' is not a luggage storage,fits no amenity — removed
+Don Remegio Villas,General Luna,luggage storage,INCORRECT,remove,,type '3-star hotel' is not a luggage storage,fits no amenity — removed
+Bayay Esteria,General Luna,luggage storage,REVIEW,keep,luggage storage,Industry blank — cannot judge,uncertain — kept by default
+Siargao Events,General Luna,luggage storage,INCORRECT,reclassify,convenience store,type 'marketing agency' is not a luggage storage,re-filed luggage storage -> convenience store
+KENJIE'S MOTORBIKE RENTALS,General Luna,transportation,INCORRECT,remove,,name implies not a real transportation,fits no amenity — removed
+Thalata Motorbike Rental,General Luna,transportation,INCORRECT,remove,,name implies not a real transportation,fits no amenity — removed
+Kermit parking,General Luna,transportation,INCORRECT,remove,,type 'parking lot for motorcycles' is not a transportation,fits no amenity — removed
+Ebikes Siargao,General Luna,transportation,INCORRECT,reclassify,scooter rental,type 'car rental agency' is not a transportation,re-filed transportation -> scooter rental
+Surf and Chill - Siargao,General Luna,transportation,INCORRECT,remove,,type 'hotel' is not a transportation,fits no amenity — removed
+Happy Feet Siargao and Bike Rental,General Luna,transportation,INCORRECT,reclassify,scooter rental,name implies not a real transportation,re-filed transportation -> scooter rental
+K3 Motorbikes Rental,General Luna,transportation,INCORRECT,remove,,name implies not a real transportation,fits no amenity — removed
+Cee Moto Rentals,General Luna,transportation,INCORRECT,reclassify,scooter rental,name implies not a real transportation,re-filed transportation -> scooter rental
+Refer Me Siargao | Diqueco,General Luna,scooter rental,INCORRECT,remove,,type 'travel agency' is excluded from scooter rental,fits no amenity — removed
+E-Scooters by Tawhay,General Luna,scooter rental,INCORRECT,reclassify,convenience store,type 'electric bicycle store' is not a scooter rental,re-filed scooter rental -> convenience store
+Island Balay,General Luna,scooter rental,INCORRECT,remove,,type 'guest house' is not a scooter rental,fits no amenity — removed
+TLShaw Homestay,General Luna,scooter rental,REVIEW,keep,scooter rental,Industry blank — cannot judge,uncertain — kept by default
+Gen Luna Municipal Hall,General Luna,embassy,INCORRECT,remove,,type 'district government office' is not a embassy,fits no amenity — removed
+Iglesia Ni Cristo [Surigao del Norte] - Gen. Luna EXT.,General Luna,embassy,INCORRECT,remove,,type 'place of worship' is not a embassy,fits no amenity — removed
+Marajaw Jungle,General Luna,embassy,INCORRECT,remove,,type 'hotel' is not a embassy,fits no amenity — removed
+Asmara Siargao,General Luna,tourist information,INCORRECT,remove,,type 'resort hotel' is not a tourist information,fits no amenity — removed
+Siargao Town Center,Siargao,atm,INCORRECT,remove,,type 'community center' is not a atm,fits no amenity — removed
+Siargao Airport,Siargao,atm,INCORRECT,reclassify,transportation,type 'airport' is not a atm,re-filed atm -> transportation
+DBP Siargao,Siargao,bank,REVIEW,keep,bank,Industry blank — cannot judge,uncertain — kept by default
+JM Siargao Motorbike Rental Airport,Siargao,currency exchange,INCORRECT,reclassify,scooter rental,type 'motorcycle rental agency' is excluded from currency exchange,re-filed currency exchange -> scooter rental
+Siargao rose bike & car rental,Siargao,currency exchange,INCORRECT,reclassify,scooter rental,type 'motorcycle rental agency' is excluded from currency exchange,re-filed currency exchange -> scooter rental
+Aulea Siargao,Siargao,public wifi,INCORRECT,remove,,type 'hotel' is excluded from public wifi,fits no amenity — removed
+Pacifico Beach Resort,Siargao,sim card,INCORRECT,remove,,type 'resort hoteldirections' is not a sim card,fits no amenity — removed
+Juan & Juanita,Siargao,convenience store,INCORRECT,remove,,type 'ice cream shop' is excluded from convenience store,fits no amenity — removed
+Sapporo Swirl Siargao,Siargao,convenience store,INCORRECT,remove,,type 'ice cream shop' is excluded from convenience store,fits no amenity — removed
+WHITE BEARD COFFEE SHOP ( SIARGAO TOWN CENTER BRANCH ),Siargao,convenience store,INCORRECT,reclassify,public wifi,type 'coffee shop' is excluded from convenience store,re-filed convenience store -> public wifi
+Meraki Bakery and Coffee,Siargao,convenience store,INCORRECT,reclassify,public wifi,type 'coffee shop' is excluded from convenience store,re-filed convenience store -> public wifi
+Siargao local bread,Siargao,convenience store,INCORRECT,remove,,type 'bakery' is excluded from convenience store,fits no amenity — removed
+Timpla Siargao Coffee Shop,Siargao,convenience store,INCORRECT,reclassify,public wifi,type 'coffee shop' is excluded from convenience store,re-filed convenience store -> public wifi
+Carretera Surf & Café,Siargao,convenience store,INCORRECT,reclassify,public wifi,type 'coffee shop' is excluded from convenience store,re-filed convenience store -> public wifi
+HomeBreak Cafe Siargao,Siargao,convenience store,INCORRECT,reclassify,public wifi,type 'coffee shop' is excluded from convenience store,re-filed convenience store -> public wifi
+Asuncion’s Purple Hub - Siargao,Siargao,convenience store,INCORRECT,remove,,type 'cake shop' is excluded from convenience store,fits no amenity — removed
+Shelves Siargao Convenience Store,Siargao,convenience store,INCORRECT,remove,,business not operating,fits no amenity — removed
+Nearby Coffee Siargao,Siargao,convenience store,INCORRECT,reclassify,public wifi,type 'coffee shop' is excluded from convenience store,re-filed convenience store -> public wifi
+Current Siargao,Siargao,convenience store,INCORRECT,reclassify,public wifi,type 'coffee shop' is excluded from convenience store,re-filed convenience store -> public wifi
+Siargao Car Rental Services,Siargao,transportation,INCORRECT,reclassify,scooter rental,name implies not a real transportation,re-filed transportation -> scooter rental
+Isla Siargao Motorbike Rental,Siargao,transportation,INCORRECT,reclassify,scooter rental,name implies not a real transportation,re-filed transportation -> scooter rental
+San Isidro Bridge,Siargao,transportation,INCORRECT,remove,,type 'bridge' is not a transportation,fits no amenity — removed
+Ilihan ATV Rental in Siargao,Siargao,scooter rental,INCORRECT,reclassify,transportation,type 'adventure sports center' is not a scooter rental,re-filed scooter rental -> transportation
+Offroad Motor shop Siargao Ph.,Siargao,scooter rental,INCORRECT,remove,,type 'motorcycle repair shop' is not a scooter rental,fits no amenity — removed
+National Book Store - Siargao,Siargao,post office,INCORRECT,reclassify,convenience store,type 'book store' is not a post office,re-filed post office -> convenience store
+Numancia Tourism Center,Siargao,tourist information,INCORRECT,remove,,name implies not a real tourist information,fits no amenity — removed
+Sapa sa Maasin River,Siargao,tourist information,INCORRECT,remove,,name implies not a real tourist information,fits no amenity — removed
+Kangkangon Island,Siargao,tourist information,INCORRECT,remove,,name implies not a real tourist information,fits no amenity — removed
+Litik Maasin River- Siargao,Siargao,tourist information,INCORRECT,remove,,name implies not a real tourist information,fits no amenity — removed
+Sugba Blue Lagoon,Siargao,tourist information,INCORRECT,remove,,name implies not a real tourist information,fits no amenity — removed
+Del Carmen Mangrove Sanctuary,Siargao,tourist information,INCORRECT,remove,,name implies not a real tourist information,fits no amenity — removed

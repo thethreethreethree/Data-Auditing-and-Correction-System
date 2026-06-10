@@ -129,8 +129,31 @@
     return lines.join("\r\n");
   }
 
-  const api = { RULES, SPECIAL, NAME_REJECT, amenityOf, cleanIndustry, classify, parseCSV, toCSV,
-                AMENITIES: Object.keys(RULES).sort() };
+  // Run the matrix in reverse: which amenities WOULD accept this real type?
+  function reclassifyTargets(real) {
+    if (!real) return [];
+    const out = [];
+    for (const am of Object.keys(RULES)) {
+      const r = RULES[am];
+      if (r.accept.some((a) => real.includes(a)) && !r.reject.some((x) => real.includes(x))) out.push(am);
+    }
+    return out;
+  }
+
+  // Full-automation policy (no human gate); flags anything uncertain or changed.
+  function autoDecision(row) {
+    const [verdict, reason, real] = classify(row);
+    const cur = amenityOf(row);
+    if (verdict === "CORRECT") return { action: "keep", target: cur, verdict, reason, note: "", flagged: false };
+    if (verdict === "REVIEW") return { action: "keep", target: cur, verdict, reason, note: "uncertain — kept by default", flagged: true };
+    const targets = reclassifyTargets(real).filter((t) => t !== cur);
+    if (targets.length === 1) return { action: "reclassify", target: targets[0], verdict, reason, note: `re-filed ${cur} → ${targets[0]}`, flagged: true };
+    if (targets.length === 0) return { action: "remove", target: null, verdict, reason, note: "fits no amenity — removed", flagged: true };
+    return { action: "reclassify", target: targets[0], verdict, reason, note: `ambiguous [${targets}]; chose ${targets[0]}`, flagged: true };
+  }
+
+  const api = { RULES, SPECIAL, NAME_REJECT, amenityOf, cleanIndustry, classify, reclassifyTargets,
+                autoDecision, parseCSV, toCSV, AMENITIES: Object.keys(RULES).sort() };
   if (typeof module !== "undefined" && module.exports) module.exports = api;
   else root.DACS = api;
 })(typeof window !== "undefined" ? window : this);

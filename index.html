@@ -46,6 +46,11 @@
   .btn { background:var(--panel2); border:1px solid var(--line); color:var(--ink);
     padding:8px 13px; border-radius:8px; cursor:pointer; font-size:13px; }
   .btn.primary { background:var(--ok); color:#04140a; border-color:var(--ok); font-weight:600; }
+  .btn.auto { background:var(--acc); color:#04101f; border-color:var(--acc); font-weight:700; }
+  #banner { display:none; margin:12px 0 4px; padding:12px 16px; border-radius:10px;
+    background:#13202f; border:1px solid #1f3a57; color:var(--ink); font-size:13.5px; }
+  #banner b { color:#79c0ff; }
+  td.reason .note { margin-top:4px; color:#79c0ff; font-size:12px; }
   #count { color:var(--mut); font-size:12.5px; margin:4px 2px 10px; }
 
   #tableWrap { border:1px solid var(--line); border-radius:10px; overflow:hidden; }
@@ -95,11 +100,14 @@
     <button class="filter" data-filter="INCORRECT">Mismatches</button>
     <button class="filter" data-filter="REVIEW">Review</button>
     <button class="filter" data-filter="CORRECT">Matches</button>
+    <button class="filter" data-filter="flagged">Flagged ⚑</button>
     <input id="search" type="text" placeholder="search place, type, city…" />
-    <button class="btn" id="acceptAll" title="Reset every row to the engine's proposed action">Accept proposals</button>
+    <button class="btn auto" id="autoBtn" title="Auto-apply every decision — keep / re-file / remove — no per-row review">⚡ Auto-correct</button>
+    <button class="btn" id="acceptAll" title="Reset every row to the engine's proposed action">Reset</button>
     <button class="btn" id="logBtn">Export audit log</button>
     <button class="btn primary" id="exportBtn">Export corrected CSV</button>
   </div>
+  <div id="banner"></div>
   <div id="count"></div>
 
   <div id="tableWrap"></div>

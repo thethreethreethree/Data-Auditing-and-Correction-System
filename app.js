@@ -49,6 +49,7 @@
       if (filter === "CORRECT" && a.verdict !== "CORRECT") return false;
       if (filter === "INCORRECT" && a.verdict !== "INCORRECT") return false;
       if (filter === "REVIEW" && a.verdict !== "REVIEW") return false;
+      if (filter === "flagged" && a.verdict === "CORRECT") return false;
       if (search) {
         const hay = (a.title + " " + a.filed_as + " " + a.real_type + " " + a.city).toLowerCase();
         if (!hay.includes(search)) return false;
@@ -91,7 +92,7 @@
         <td class="rt">${esc(a.real_type)}</td>
         <td><span class="chip ${a.verdict}">${LABEL[a.verdict]}</span></td>
         <td><span class="conf ${a.confidence}">${a.confidence}</span></td>
-        <td class="reason">${esc(a.reason)}${a.maps ? ` · <a href="${esc(a.maps)}" target="_blank" rel="noopener">map</a>` : ""}</td>
+        <td class="reason">${esc(a.reason)}${a.maps ? ` · <a href="${esc(a.maps)}" target="_blank" rel="noopener">map</a>` : ""}${a.note ? `<div class="note">→ ${esc(a.note)}</div>` : ""}</td>
         <td>${decisionSelect(a)}</td>
       </tr>`).join("");
 
@@ -136,6 +137,26 @@
     download(base() + "_audit_log.csv", E.toCSV(hdr, rows));
   }
 
+  function autoCorrect() {
+    if (!state.audited.length) return;
+    let kept = 0, refiled = 0, removed = 0, flagged = 0;
+    for (const a of state.audited) {
+      const d = E.autoDecision(a.row);
+      a.note = d.note;
+      if (d.action === "remove") { a.decision = "remove"; removed++; }
+      else if (d.action === "reclassify") { a.decision = "reclassify:" + d.target; refiled++; }
+      else { a.decision = "keep"; kept++; }
+      if (d.flagged) flagged++;
+    }
+    const b = $("#banner");
+    b.style.display = "block";
+    b.innerHTML = `⚡ <b>Auto-corrected.</b> ${kept} kept · ${refiled} re-filed to true category · ${removed} removed`
+      + ` · <b>${flagged}</b> flagged for optional review (${Math.round(100 * flagged / state.audited.length)}%).`
+      + ` &nbsp;Export below, or hit <b>Flagged&nbsp;⚑</b> to spot-check what changed.`;
+    filter = "flagged";
+    render();
+  }
+
   const base = () => state.fileName.replace(/\.csv$/i, "") || "audit";
   function download(name, text) {
     const blob = new Blob(["﻿" + text], { type: "text/csv;charset=utf-8" }); // BOM for Excel
@@ -162,6 +183,7 @@
         state.audited[+e.target.dataset.idx].decision = e.target.value;
       }
     });
+    $("#autoBtn").addEventListener("click", autoCorrect);
     $("#exportBtn").addEventListener("click", exportCorrected);
     $("#logBtn").addEventListener("click", exportLog);
     $("#acceptAll").addEventListener("click", () => {

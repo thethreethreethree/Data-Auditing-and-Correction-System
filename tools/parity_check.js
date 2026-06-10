@@ -14,5 +14,12 @@ catch { text = new TextDecoder("windows-1252").decode(buf); }
 
 const { rows } = E.parseCSV(text);
 const c = { CORRECT: 0, INCORRECT: 0, REVIEW: 0 };
-for (const r of rows) c[E.classify(r)[0]]++;
-console.log("rows:", rows.length, c);
+const a = { keep: 0, reclassify: 0, remove: 0, flagged: 0 };
+for (const r of rows) {
+  c[E.classify(r)[0]]++;
+  const d = E.autoDecision(r);
+  a[d.action]++; if (d.flagged) a.flagged++;
+}
+console.log("rows:", rows.length);
+console.log("  classify :", c, "  (Python: CORRECT:243 INCORRECT:114 REVIEW:8)");
+console.log("  autoDecide:", a, "  (Python: keep:251 reclassify:35 remove:79 flagged:122)");
