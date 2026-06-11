@@ -92,71 +92,83 @@ def _open(path):
         return open(alt, "w", encoding="utf-8-sig", newline=""), alt
 
 
-def run(infile, out, name):
+def process(infile, out, name, progress=None):
+    """Core audit/correct. progress(done,total) is called as it runs. Returns per-row
+    results (for a UI), the summary counts, and the written file paths."""
     rows = load(infile)
     mode = detect_mode(rows)
+    total = len(rows)
     os.makedirs(out, exist_ok=True)
     tally = Counter()
-    corrected, flagged, suspects, uncertain = [], [], [], []
+    corrected, flagged, suspects, uncertain, results = [], [], [], [], []
 
-    for r in rows:
+    for i, r in enumerate(rows):
         if mode == "filed":
-            d = auto_decision(r)
-            action, target = d["action"], d["target"]
-            claim = amenity_of(r); reason = d["reason"]
-            if action == "keep" and not d["flagged"]:
-                corrected.append(r)
-            elif action == "remove":
-                flagged.append((r["Title"], claim, "remove", "", reason))
-            elif action == "reclassify":
+            d = auto_decision(r); target = d["target"]; claim = amenity_of(r); reason = d["reason"]
+            if d["action"] == "keep" and not d["flagged"]:
+                corrected.append(r); act, new = "kept", ""
+            elif d["action"] == "remove":
+                flagged.append((r["Title"], claim, "remove", "", reason)); act, new = "rejected", ""
+            elif d["action"] == "reclassify":
                 _set_cat(r, target); corrected.append(r); flagged.append((r["Title"], claim, "re-file", target, reason))
-            else:  # keep (flagged/review) = uncertain
+                act, new = "updated", target
+            else:
                 corrected.append(r); flagged.append((r["Title"], claim, "keep", "", reason)); uncertain.append((r, reason))
-            tally[action] += 1
+                act, new = "uncertain", ""
         else:  # industry-as-category
-            d = decide_industry(r); action = d["action"]; claim = r["Industry"]
-            if action == "keep":
-                corrected.append(r); tally["keep"] += 1
-            elif action == "reclassify":
+            d = decide_industry(r); claim = r["Industry"]; reason = d["reason"]
+            if d["action"] == "keep":
+                corrected.append(r); act, new = "kept", ""
+            elif d["action"] == "reclassify":
                 r["Industry"] = d["target"]; corrected.append(r)
-                flagged.append((r["Title"], claim, "re-file", d["target"], d["reason"])); tally["reclassify"] += 1
-            else:  # suspect = uncertain
-                corrected.append(r)  # keep by default; flag for Claude
-                flagged.append((r["Title"], claim, "suspect", "", d["reason"]))
-                suspects.append(r); uncertain.append((r, d["reason"])); tally["suspect"] += 1
+                flagged.append((r["Title"], claim, "re-file", d["target"], reason)); act, new = "updated", d["target"]
+            else:
+                corrected.append(r); flagged.append((r["Title"], claim, "suspect", "", reason))
+                suspects.append(r); uncertain.append((r, reason)); act, new = "uncertain", ""
+        tally[act] += 1
+        results.append({"title": r["Title"], "tagged": claim, "action": act, "new": new, "reason": reason})
+        if progress and (i % 25 == 0 or i == total - 1):
+            progress(i + 1, total)
 
-    # write files
+    files = {}
     cf, cp = _open(os.path.join(out, f"{name}_corrected.csv"))
     with cf:
         w = csv.writer(cf); w.writerow(COLS)
         for r in corrected: w.writerow([r[c] for c in COLS])
+    files["corrected"] = cp
     ff, fp = _open(os.path.join(out, f"{name}_flagged.csv"))
     with ff:
         w = csv.writer(ff); w.writerow(["Title", "Claimed", "Action", "Re-filed To", "Reason"])
         for rec in flagged: w.writerow(rec)
-    sp = None
+    files["flagged"] = fp
     if suspects:
         sf, sp = _open(os.path.join(out, f"{name}_suspects.csv"))
         with sf:
             w = csv.writer(sf); w.writerow(["Title", "Claimed Category", "City", "Address", "Verdict (fill)"])
             for r in suspects: w.writerow([r["Title"], r["Industry"], r["City"], r["Address"], ""])
-    up = None
-    if uncertain:                                  # full data of every row the tool was unsure about
+        files["suspects"] = sp
+    if uncertain:
         uf, up = _open(os.path.join(out, f"{name}_uncertain.csv"))
         with uf:
             w = csv.writer(uf); w.writerow(COLS + ["_Uncertain Reason"])
             for r, why in uncertain: w.writerow([r[c] for c in COLS] + [why])
+        files["uncertain"] = up
+    rep = [f"DACS report — {os.path.basename(infile)}", f"mode: {mode}", f"rows: {total}",
+           "actions: " + ", ".join(f"{k}={v}" for k, v in tally.most_common())]
+    for k in ("corrected", "flagged", "suspects", "uncertain"):
+        if k in files: rep.append(f"{k:9} -> {os.path.basename(files[k])}")
+    rp = os.path.join(out, f"{name}_report.txt")
+    with open(rp, "w", encoding="utf-8") as f: f.write("\n".join(rep) + "\n")
+    files["report"] = rp
+    return {"mode": mode, "total": total, "results": results, "summary": dict(tally), "files": files}
 
-    report = [f"DACS report — {os.path.basename(infile)}", f"mode: {mode}", f"rows: {len(rows)}",
-              "actions: " + ", ".join(f"{k}={v}" for k, v in tally.most_common()),
-              f"corrected -> {os.path.basename(cp)} ({len(corrected)} rows)",
-              f"flagged   -> {os.path.basename(fp)} ({len(flagged)} rows)"]
-    if sp: report.append(f"suspects  -> {os.path.basename(sp)} ({len(suspects)} rows — agent classifies these)")
-    if up: report.append(f"uncertain -> {os.path.basename(up)} ({len(uncertain)} rows — full data the tool was unsure about)")
-    rt = "\n".join(report)
-    with open(os.path.join(out, f"{name}_report.txt"), "w", encoding="utf-8") as f:
-        f.write(rt + "\n")
-    print(rt)
+
+def run(infile, out, name):
+    res = process(infile, out, name)
+    print(f"DACS — {os.path.basename(infile)} ({res['mode']} mode, {res['total']} rows)")
+    print("  " + ", ".join(f"{k}={v}" for k, v in res["summary"].items()))
+    for k, path in res["files"].items():
+        print(f"  {k:9} -> {path}")
     print(f"\nwritten to: {out}")
 
 
