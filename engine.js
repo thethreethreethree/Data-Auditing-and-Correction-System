@@ -62,6 +62,59 @@
 
   const has = (s, arr) => arr.some(x => s.includes(x));
 
+  // ---------- hospitality taxonomy (deterministic; mirrors tools/audit_engine.py) ----------
+  const HOSP_LODGING_CATS = new Set(["hotels", "hostels", "guesthouses", "bed and breakfast", "resorts"]);
+  const HOSP_CATS = new Set([...HOSP_LODGING_CATS, "restaurants", "cafes", "bars", "nightclubs", "nightlife", "tours", "things to do", "dive shops"]);
+  const HOSP_SAT = { restaurant: ["restaurants"], cafe: ["cafes"], bar: ["bars", "nightlife"], nightclub: ["nightclubs", "nightlife"],
+                     tour: ["tours"], attraction: ["things to do"], "dive shop": ["dive shops"],
+                     lodging: ["hotels", "hostels", "guesthouses", "bed and breakfast", "resorts"] };
+  const HOSP_TARGET = { restaurant: "restaurants", cafe: "cafes", bar: "bars", nightclub: "nightclubs", tour: "tours",
+                        attraction: "things to do", "dive shop": "dive shops", lodging: "lodging" };
+  const HOSP_PRED = [
+    ["massage","non-hospitality"],["spa","non-hospitality"],["wellness","non-hospitality"],["ice bath","non-hospitality"],
+    ["gym","non-hospitality"],["fitness","non-hospitality"],["jiu","non-hospitality"],["tennis","non-hospitality"],
+    ["tattoo","non-hospitality"],["piercing","non-hospitality"],["coworking","non-hospitality"],["co-working","non-hospitality"],
+    ["car rental","non-hospitality"],["motorbike rental","non-hospitality"],["pharmacy","non-hospitality"],["salon","non-hospitality"],
+    ["tourism office","non-hospitality"],["tourism information","non-hospitality"],["tourist information","non-hospitality"],
+    ["public market","non-hospitality"],["graphics","non-hospitality"],["multimedia","non-hospitality"],["drone","non-hospitality"],
+    ["surf shop","non-hospitality"],["surfshop","non-hospitality"],["boardriders","non-hospitality"],
+    ["resort","lodging"],["hostel","lodging"],["bed and breakfast","lodging"],["bed & breakfast","lodging"],["b&b","lodging"],
+    ["guest house","lodging"],["guesthouse","lodging"],["pension","lodging"],["homestay","lodging"],["home stay","lodging"],
+    ["villa","lodging"],["bungalow","lodging"],["apartelle","lodging"],["apartment","lodging"],["coliving","lodging"],
+    ["dorm","lodging"],["capsule","lodging"],["reddoorz","lodging"],["inn","lodging"],["lodge","lodging"],["lodging","lodging"],
+    ["suite","lodging"],["rooms","lodging"],["transient","lodging"],["hotel","lodging"],["casa","lodging"],["retreat","lodging"],["camp","lodging"],
+    ["diving","dive shop"],["dive center","dive shop"],["scuba","dive shop"],["freediv","dive shop"],
+    ["beach","attraction"],["island","attraction"],["lagoon","attraction"],["sandbar","attraction"],["falls","attraction"],
+    ["cave","attraction"],["rock formation","attraction"],["viewpoint","attraction"],["park","attraction"],["port","attraction"],
+    ["firefly","attraction"],["cove","attraction"],["reef","attraction"],["sanctuary","attraction"],["surf school","attraction"],
+    ["surf spot","attraction"],["surfing area","attraction"],["surf academy","attraction"],["kite","attraction"],["hideaway","attraction"],
+    ["gastropub","bar"],["restobar","bar"],["beach club","bar"],["cocktail","bar"],["brewery","bar"],
+    ["night club","nightclub"],["nightclub","nightclub"],["disco","nightclub"],
+    ["coffee","cafe"],["cafe","cafe"],["café","cafe"],["espresso","cafe"],["matcha","cafe"],["bakery","cafe"],["bakeshop","cafe"],
+    ["restaurant","restaurant"],["resto","restaurant"],["bistro","restaurant"],["grill","restaurant"],["bbq","restaurant"],
+    ["barbecue","restaurant"],["eatery","restaurant"],["diner","restaurant"],["seafood","restaurant"],["kitchen","restaurant"],
+    ["panciteria","restaurant"],["pizza","restaurant"],["shawarma","restaurant"],["kebab","restaurant"],["food","restaurant"],
+    ["travel and tour","tour"],["tour operator","tour"],["tour agency","tour"],["travel agency","tour"],
+    ["boat tour","tour"],["island hopping","tour"],["expedition","tour"],["tours","tour"],
+    ["bar","bar"],
+  ];
+  function predictHospType(title, ind) {
+    const hay = (ind + " " + title).toLowerCase();
+    for (const [kw, t] of HOSP_PRED) if (hay.includes(kw)) return t;
+    return null;
+  }
+  function classifyHospitality(row) {
+    const amenity = amenityOf(row);
+    const tt = predictHospType(String(row["Title"] || ""), cleanIndustry(row["Industry"] || ""));
+    if (tt === null) {
+      if (HOSP_LODGING_CATS.has(amenity)) return ["CORRECT", "assumed lodging (filed under accommodation)", "lodging"];
+      return ["REVIEW", "type unclear from name", ""];
+    }
+    if (tt === "non-hospitality") return ["INCORRECT", "not a hospitality place", "non-hospitality"];
+    if ((HOSP_SAT[tt] || []).includes(amenity)) return ["CORRECT", `reads as ${tt}`, tt];
+    return ["INCORRECT", `reads as ${tt}, not ${amenity}`, tt];
+  }
+
   // returns [verdict, reason, realType]
   function classify(row) {
     const amenity = amenityOf(row);
@@ -71,6 +124,7 @@
 
     if (DEAD.test(String(row["Industry"] || "") + " " + String(row["Title"] || "")))
       return ["INCORRECT", "business not operating", ind];
+    if (HOSP_CATS.has(amenity)) return classifyHospitality(row);
     if (!rule) return ["REVIEW", `no rule for amenity '${amenity}'`, ind];
     const acc = rule.accept, rej = rule.reject;
 
@@ -146,6 +200,11 @@
     const cur = amenityOf(row);
     if (verdict === "CORRECT") return { action: "keep", target: cur, verdict, reason, note: "", flagged: false };
     if (verdict === "REVIEW") return { action: "keep", target: cur, verdict, reason, note: "uncertain — kept by default", flagged: true };
+    if (HOSP_CATS.has(cur)) {                              // hospitality re-file / remove
+      const target = HOSP_TARGET[real];
+      if (target && target !== cur) return { action: "reclassify", target, verdict, reason, note: `re-filed ${cur} → ${target}`, flagged: true };
+      return { action: "remove", target: null, verdict, reason, note: `not a ${cur} — removed`, flagged: true };
+    }
     const targets = reclassifyTargets(real).filter((t) => t !== cur);
     if (targets.length === 1) return { action: "reclassify", target: targets[0], verdict, reason, note: `re-filed ${cur} → ${targets[0]}`, flagged: true };
     if (targets.length === 0) return { action: "remove", target: null, verdict, reason, note: "fits no amenity — removed", flagged: true };

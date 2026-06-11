@@ -112,6 +112,67 @@ NAME_REJECT = {
                             "sandbar","sand bar","spring","lake","mountain","sanctuary","cove","reef"],
 }
 
+# ---------- hospitality taxonomy (deterministic) ----------
+# The browser tool can't call an LLM, so this is the autonomous fallback (~mid-80s% on
+# decidable rows; the agent pass is higher). Accommodation subtype isn't in the data, so
+# all of hotels/hostels/guesthouses/B&B/resorts collapse to one "lodging" bucket.
+HOSP_LODGING_CATS = {"hotels", "hostels", "guesthouses", "bed and breakfast", "resorts"}
+HOSP_CATS = HOSP_LODGING_CATS | {"restaurants", "cafes", "bars", "nightclubs", "nightlife", "tours", "things to do", "dive shops"}
+HOSP_SAT = {"restaurant": {"restaurants"}, "cafe": {"cafes"}, "bar": {"bars", "nightlife"},
+            "nightclub": {"nightclubs", "nightlife"}, "tour": {"tours"}, "attraction": {"things to do"},
+            "dive shop": {"dive shops"}, "lodging": set(HOSP_LODGING_CATS)}
+HOSP_TARGET = {"restaurant": "restaurants", "cafe": "cafes", "bar": "bars", "nightclub": "nightclubs",
+               "tour": "tours", "attraction": "things to do", "dive shop": "dive shops", "lodging": "lodging"}
+HOSP_PRED = [  # (substring, true_type) — first match wins; order = most specific first
+    ("massage","non-hospitality"),("spa","non-hospitality"),("wellness","non-hospitality"),("ice bath","non-hospitality"),
+    ("gym","non-hospitality"),("fitness","non-hospitality"),("jiu","non-hospitality"),("tennis","non-hospitality"),
+    ("tattoo","non-hospitality"),("piercing","non-hospitality"),("coworking","non-hospitality"),("co-working","non-hospitality"),
+    ("car rental","non-hospitality"),("motorbike rental","non-hospitality"),("pharmacy","non-hospitality"),("salon","non-hospitality"),
+    ("tourism office","non-hospitality"),("tourism information","non-hospitality"),("tourist information","non-hospitality"),
+    ("public market","non-hospitality"),("graphics","non-hospitality"),("multimedia","non-hospitality"),("drone","non-hospitality"),
+    ("surf shop","non-hospitality"),("surfshop","non-hospitality"),("boardriders","non-hospitality"),
+    ("resort","lodging"),("hostel","lodging"),("bed and breakfast","lodging"),("bed & breakfast","lodging"),("b&b","lodging"),
+    ("guest house","lodging"),("guesthouse","lodging"),("pension","lodging"),("homestay","lodging"),("home stay","lodging"),
+    ("villa","lodging"),("bungalow","lodging"),("apartelle","lodging"),("apartment","lodging"),("coliving","lodging"),
+    ("dorm","lodging"),("capsule","lodging"),("reddoorz","lodging"),("inn","lodging"),("lodge","lodging"),("lodging","lodging"),
+    ("suite","lodging"),("rooms","lodging"),("transient","lodging"),("hotel","lodging"),("casa","lodging"),("retreat","lodging"),("camp","lodging"),
+    ("diving","dive shop"),("dive center","dive shop"),("scuba","dive shop"),("freediv","dive shop"),
+    ("beach","attraction"),("island","attraction"),("lagoon","attraction"),("sandbar","attraction"),("falls","attraction"),
+    ("cave","attraction"),("rock formation","attraction"),("viewpoint","attraction"),("park","attraction"),("port","attraction"),
+    ("firefly","attraction"),("cove","attraction"),("reef","attraction"),("sanctuary","attraction"),("surf school","attraction"),
+    ("surf spot","attraction"),("surfing area","attraction"),("surf academy","attraction"),("kite","attraction"),("hideaway","attraction"),
+    ("gastropub","bar"),("restobar","bar"),("beach club","bar"),("cocktail","bar"),("brewery","bar"),
+    ("night club","nightclub"),("nightclub","nightclub"),("disco","nightclub"),
+    ("coffee","cafe"),("cafe","cafe"),("café","cafe"),("espresso","cafe"),("matcha","cafe"),("bakery","cafe"),("bakeshop","cafe"),
+    ("restaurant","restaurant"),("resto","restaurant"),("bistro","restaurant"),("grill","restaurant"),("bbq","restaurant"),
+    ("barbecue","restaurant"),("eatery","restaurant"),("diner","restaurant"),("seafood","restaurant"),("kitchen","restaurant"),
+    ("panciteria","restaurant"),("pizza","restaurant"),("shawarma","restaurant"),("kebab","restaurant"),("food","restaurant"),
+    ("travel and tour","tour"),("tour operator","tour"),("tour agency","tour"),("travel agency","tour"),
+    ("boat tour","tour"),("island hopping","tour"),("expedition","tour"),("tours","tour"),
+    ("bar","bar"),  # generic, last
+]
+
+def predict_hosp_type(title, ind):
+    hay = (ind + " " + title).lower()
+    for kw, t in HOSP_PRED:
+        if kw in hay:
+            return t
+    return None
+
+def classify_hospitality(row):
+    amenity = amenity_of(row)
+    tt = predict_hosp_type(row["Title"], clean_industry(row["Industry"]))
+    if tt is None:
+        if amenity in HOSP_LODGING_CATS:
+            return "CORRECT", "assumed lodging (filed under accommodation)", "lodging"
+        return "REVIEW", "type unclear from name", ""
+    if tt == "non-hospitality":
+        return "INCORRECT", "not a hospitality place", "non-hospitality"
+    if amenity in HOSP_SAT.get(tt, set()):
+        return "CORRECT", f"reads as {tt}", tt
+    return "INCORRECT", f"reads as {tt}, not {amenity}", tt
+
+
 def classify(row):
     amenity = amenity_of(row)
     ind = clean_industry(row["Industry"])
@@ -120,6 +181,8 @@ def classify(row):
 
     if DEAD.search(row["Industry"] + " " + row["Title"]):
         return "INCORRECT", "business not operating", ind
+    if amenity in HOSP_CATS:
+        return classify_hospitality(row)
     if rule is None:
         return "REVIEW", f"no rule for amenity '{amenity}'", ind
     acc, rej = rule["accept"], rule["reject"]
@@ -172,6 +235,13 @@ def auto_decision(row):
     if verdict == "REVIEW":
         return {"action": "keep", "target": cur, "verdict": verdict, "reason": reason,
                 "note": "uncertain — kept by default", "flagged": True}
+    if cur in HOSP_CATS:                                  # hospitality re-file/remove
+        target = HOSP_TARGET.get(real)                    # real = true_type; None => non-hospitality
+        if target and target != cur:
+            return {"action": "reclassify", "target": target, "verdict": verdict, "reason": reason,
+                    "note": f"re-filed {cur} -> {target}", "flagged": True}
+        return {"action": "remove", "target": None, "verdict": verdict, "reason": reason,
+                "note": f"not a {cur} — removed", "flagged": True}
     targets = [t for t in reclassify_targets(real) if t != cur]
     if len(targets) == 1:
         return {"action": "reclassify", "target": targets[0], "verdict": verdict, "reason": reason,
