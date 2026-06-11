@@ -64,12 +64,31 @@
 
   // ---------- hospitality taxonomy (deterministic; mirrors tools/audit_engine.py) ----------
   const HOSP_LODGING_CATS = new Set(["hotels", "hostels", "guesthouses", "bed and breakfast", "resorts"]);
-  const HOSP_CATS = new Set([...HOSP_LODGING_CATS, "restaurants", "cafes", "bars", "nightclubs", "nightlife", "tours", "things to do", "dive shops"]);
+  const ACCOM_FILED = new Set([...HOSP_LODGING_CATS, "apartments"]);
+  const HOSP_CATS = new Set([...ACCOM_FILED, "restaurants", "cafes", "bars", "nightclubs", "nightlife", "tours", "things to do", "dive shops"]);
   const HOSP_SAT = { restaurant: ["restaurants"], cafe: ["cafes"], bar: ["bars", "nightlife"], nightclub: ["nightclubs", "nightlife"],
                      tour: ["tours"], attraction: ["things to do"], "dive shop": ["dive shops"],
                      lodging: ["hotels", "hostels", "guesthouses", "bed and breakfast", "resorts"] };
   const HOSP_TARGET = { restaurant: "restaurants", cafe: "cafes", bar: "bars", nightclub: "nightclubs", tour: "tours",
-                        attraction: "things to do", "dive shop": "dive shops", lodging: "lodging" };
+                        attraction: "things to do", "dive shop": "dive shops", lodging: "lodging",
+                        hotels: "hotels", hostels: "hostels", guesthouses: "guesthouses",
+                        "bed and breakfast": "bed and breakfast", resorts: "resorts" };
+  // name keyword -> accommodation subtype (villa->guesthouses, apartment/homestay->B&B, ...)
+  const ACCOM_SUBTYPE = [
+    ["resort","resorts"],["hostel","hostels"],["dorm","hostels"],["bunk","hostels"],["coliving","hostels"],
+    ["co-living","hostels"],["capsule","hostels"],["backpacker","hostels"],
+    ["bed and breakfast","bed and breakfast"],["bed & breakfast","bed and breakfast"],["b&b","bed and breakfast"],
+    ["aparthotel","bed and breakfast"],["apartelle","bed and breakfast"],["apartment","bed and breakfast"],
+    ["homestay","bed and breakfast"],["home stay","bed and breakfast"],
+    ["villa","guesthouses"],["casita","guesthouses"],["guest house","guesthouses"],["guesthouse","guesthouses"],
+    ["pension","guesthouses"],["inn","guesthouses"],["lodge","guesthouses"],["hotel","hotels"],["suite","hotels"],
+  ];
+  const ACCOM_RE = ACCOM_SUBTYPE.map(([kw, sub]) =>
+    [new RegExp("\\b" + kw.replace(/[.*+?^${}()|[\]\\&]/g, "\\$&") + (kw === "inn" ? "\\b" : "")), sub]);
+  function accomSubtype(name) {
+    for (const [rx, sub] of ACCOM_RE) if (rx.test(name)) return sub;
+    return null;
+  }
   const HOSP_PRED = [
     ["massage","non-hospitality"],["spa","non-hospitality"],["wellness","non-hospitality"],["ice bath","non-hospitality"],
     ["gym","non-hospitality"],["fitness","non-hospitality"],["jiu","non-hospitality"],["tennis","non-hospitality"],
@@ -105,11 +124,21 @@
   }
   function classifyHospitality(row) {
     const amenity = amenityOf(row);
+    const title = String(row["Title"] || "").toLowerCase();
     const tt = predictHospType(String(row["Title"] || ""), cleanIndustry(row["Industry"] || ""));
-    if (tt === null) {
-      if (HOSP_LODGING_CATS.has(amenity)) return ["CORRECT", "assumed lodging (filed under accommodation)", "lodging"];
-      return ["REVIEW", "type unclear from name", ""];
+    if (ACCOM_FILED.has(amenity)) {                          // accommodation -> assign subtype from name
+      if (["restaurant", "cafe", "bar", "nightclub", "attraction", "dive shop", "tour"].includes(tt))
+        return ["INCORRECT", `reads as ${tt}, not lodging`, tt];
+      if (tt === "non-hospitality") return ["INCORRECT", "not a hospitality place", "non-hospitality"];
+      const sub = accomSubtype(title);
+      if (sub === null) {
+        if (HOSP_LODGING_CATS.has(amenity)) return ["CORRECT", `kept as ${amenity}`, amenity];
+        return ["INCORRECT", "apartment -> bed and breakfast", "bed and breakfast"];
+      }
+      if (sub === amenity) return ["CORRECT", `name reads as ${sub}`, sub];
+      return ["INCORRECT", `name reads as ${sub}`, sub];
     }
+    if (tt === null) return ["REVIEW", "type unclear from name", ""];
     if (tt === "non-hospitality") return ["INCORRECT", "not a hospitality place", "non-hospitality"];
     if ((HOSP_SAT[tt] || []).includes(amenity)) return ["CORRECT", `reads as ${tt}`, tt];
     return ["INCORRECT", `reads as ${tt}, not ${amenity}`, tt];
@@ -125,7 +154,11 @@
     if (DEAD.test(String(row["Industry"] || "") + " " + String(row["Title"] || "")))
       return ["INCORRECT", "business not operating", ind];
     if (HOSP_CATS.has(amenity)) return classifyHospitality(row);
-    if (!rule) return ["REVIEW", `no rule for amenity '${amenity}'`, ind];
+    if (!rule) {
+      const sub = accomSubtype(title);                      // blank/unknown Source Query: catch accommodation by name
+      if (sub) return ["INCORRECT", `name reads as ${sub}`, sub];
+      return ["REVIEW", `no rule for amenity '${amenity}'`, ind];
+    }
     const acc = rule.accept, rej = rule.reject;
 
     if (SPECIAL.has(amenity)) {
@@ -200,10 +233,11 @@
     const cur = amenityOf(row);
     if (verdict === "CORRECT") return { action: "keep", target: cur, verdict, reason, note: "", flagged: false };
     if (verdict === "REVIEW") return { action: "keep", target: cur, verdict, reason, note: "uncertain — kept by default", flagged: true };
-    if (HOSP_CATS.has(cur)) {                              // hospitality re-file / remove
+    if (HOSP_CATS.has(cur) || HOSP_LODGING_CATS.has(real)) {  // hospitality re-file/remove (incl. blank-SQ accommodation)
       const target = HOSP_TARGET[real];
-      if (target && target !== cur) return { action: "reclassify", target, verdict, reason, note: `re-filed ${cur} → ${target}`, flagged: true };
-      return { action: "remove", target: null, verdict, reason, note: `not a ${cur} — removed`, flagged: true };
+      if (target && target !== cur) return { action: "reclassify", target, verdict, reason, note: `re-filed ${cur || "(none)"} → ${target}`, flagged: true };
+      if (target === cur) return { action: "keep", target: cur, verdict, reason, note: "", flagged: false };
+      return { action: "remove", target: null, verdict, reason, note: `not a ${cur || "hospitality"} place — removed`, flagged: true };
     }
     const targets = reclassifyTargets(real).filter((t) => t !== cur);
     if (targets.length === 1) return { action: "reclassify", target: targets[0], verdict, reason, note: `re-filed ${cur} → ${targets[0]}`, flagged: true };

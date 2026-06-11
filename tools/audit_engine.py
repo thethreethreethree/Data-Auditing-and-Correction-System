@@ -113,16 +113,37 @@ NAME_REJECT = {
 }
 
 # ---------- hospitality taxonomy (deterministic) ----------
-# The browser tool can't call an LLM, so this is the autonomous fallback (~mid-80s% on
-# decidable rows; the agent pass is higher). Accommodation subtype isn't in the data, so
-# all of hotels/hostels/guesthouses/B&B/resorts collapse to one "lodging" bucket.
+# Accommodation subtype is assigned from the NAME via curated rules (user's domain rule:
+# villa -> guesthouses; apartment/homestay -> bed and breakfast; inn/pension -> guesthouses; ...).
 HOSP_LODGING_CATS = {"hotels", "hostels", "guesthouses", "bed and breakfast", "resorts"}
-HOSP_CATS = HOSP_LODGING_CATS | {"restaurants", "cafes", "bars", "nightclubs", "nightlife", "tours", "things to do", "dive shops"}
+ACCOM_FILED = HOSP_LODGING_CATS | {"apartments"}        # Source-Query categories that mean "accommodation"
+HOSP_CATS = ACCOM_FILED | {"restaurants", "cafes", "bars", "nightclubs", "nightlife", "tours", "things to do", "dive shops"}
 HOSP_SAT = {"restaurant": {"restaurants"}, "cafe": {"cafes"}, "bar": {"bars", "nightlife"},
             "nightclub": {"nightclubs", "nightlife"}, "tour": {"tours"}, "attraction": {"things to do"},
             "dive shop": {"dive shops"}, "lodging": set(HOSP_LODGING_CATS)}
 HOSP_TARGET = {"restaurant": "restaurants", "cafe": "cafes", "bar": "bars", "nightclub": "nightclubs",
-               "tour": "tours", "attraction": "things to do", "dive shop": "dive shops", "lodging": "lodging"}
+               "tour": "tours", "attraction": "things to do", "dive shop": "dive shops", "lodging": "lodging",
+               "hotels": "hotels", "hostels": "hostels", "guesthouses": "guesthouses",
+               "bed and breakfast": "bed and breakfast", "resorts": "resorts"}
+# Name keyword -> accommodation subtype (first match wins; most specific first). Whole-word/
+# word-start matching so "villa" hits "Villas" but "inn" does NOT hit "winning"/"dinner".
+ACCOM_SUBTYPE = [
+    ("resort", "resorts"), ("hostel", "hostels"), ("dorm", "hostels"), ("bunk", "hostels"),
+    ("coliving", "hostels"), ("co-living", "hostels"), ("capsule", "hostels"), ("backpacker", "hostels"),
+    ("bed and breakfast", "bed and breakfast"), ("bed & breakfast", "bed and breakfast"), ("b&b", "bed and breakfast"),
+    ("aparthotel", "bed and breakfast"), ("apartelle", "bed and breakfast"), ("apartment", "bed and breakfast"),
+    ("homestay", "bed and breakfast"), ("home stay", "bed and breakfast"),
+    ("villa", "guesthouses"), ("casita", "guesthouses"), ("guest house", "guesthouses"), ("guesthouse", "guesthouses"),
+    ("pension", "guesthouses"), ("inn", "guesthouses"), ("lodge", "guesthouses"),
+    ("hotel", "hotels"), ("suite", "hotels"),
+]
+_ACCOM_RE = [((re.compile(r"\b" + re.escape(kw) + r"\b") if kw == "inn" else re.compile(r"\b" + re.escape(kw))), sub)
+             for kw, sub in ACCOM_SUBTYPE]
+def accom_subtype(name):
+    for rx, sub in _ACCOM_RE:
+        if rx.search(name):
+            return sub
+    return None
 HOSP_PRED = [  # (substring, true_type) — first match wins; order = most specific first
     ("massage","non-hospitality"),("spa","non-hospitality"),("wellness","non-hospitality"),("ice bath","non-hospitality"),
     ("gym","non-hospitality"),("fitness","non-hospitality"),("jiu","non-hospitality"),("tennis","non-hospitality"),
@@ -161,10 +182,24 @@ def predict_hosp_type(title, ind):
 
 def classify_hospitality(row):
     amenity = amenity_of(row)
+    title = row["Title"].lower()
     tt = predict_hosp_type(row["Title"], clean_industry(row["Industry"]))
+
+    if amenity in ACCOM_FILED:                              # accommodation -> assign subtype from name
+        if tt in ("restaurant", "cafe", "bar", "nightclub", "attraction", "dive shop", "tour"):
+            return "INCORRECT", f"reads as {tt}, not lodging", tt
+        if tt == "non-hospitality":
+            return "INCORRECT", "not a hospitality place", "non-hospitality"
+        sub = accom_subtype(title)
+        if sub is None:
+            if amenity in HOSP_LODGING_CATS:
+                return "CORRECT", f"kept as {amenity}", amenity
+            return "INCORRECT", "apartment -> bed and breakfast", "bed and breakfast"   # 'apartments' default
+        if sub == amenity:
+            return "CORRECT", f"name reads as {sub}", sub
+        return "INCORRECT", f"name reads as {sub}", sub
+
     if tt is None:
-        if amenity in HOSP_LODGING_CATS:
-            return "CORRECT", "assumed lodging (filed under accommodation)", "lodging"
         return "REVIEW", "type unclear from name", ""
     if tt == "non-hospitality":
         return "INCORRECT", "not a hospitality place", "non-hospitality"
@@ -184,6 +219,9 @@ def classify(row):
     if amenity in HOSP_CATS:
         return classify_hospitality(row)
     if rule is None:
+        sub = accom_subtype(title)              # blank/unknown Source Query: catch accommodation by name
+        if sub:
+            return "INCORRECT", f"name reads as {sub}", sub
         return "REVIEW", f"no rule for amenity '{amenity}'", ind
     acc, rej = rule["accept"], rule["reject"]
 
@@ -235,13 +273,15 @@ def auto_decision(row):
     if verdict == "REVIEW":
         return {"action": "keep", "target": cur, "verdict": verdict, "reason": reason,
                 "note": "uncertain — kept by default", "flagged": True}
-    if cur in HOSP_CATS:                                  # hospitality re-file/remove
-        target = HOSP_TARGET.get(real)                    # real = true_type; None => non-hospitality
+    if cur in HOSP_CATS or real in HOSP_LODGING_CATS:     # hospitality re-file/remove (incl. blank-Source-Query accommodation)
+        target = HOSP_TARGET.get(real)                    # real = true_type/subtype; None => non-hospitality
         if target and target != cur:
             return {"action": "reclassify", "target": target, "verdict": verdict, "reason": reason,
-                    "note": f"re-filed {cur} -> {target}", "flagged": True}
+                    "note": f"re-filed {cur or '(none)'} -> {target}", "flagged": True}
+        if target == cur:
+            return {"action": "keep", "target": cur, "verdict": verdict, "reason": reason, "note": "", "flagged": False}
         return {"action": "remove", "target": None, "verdict": verdict, "reason": reason,
-                "note": f"not a {cur} — removed", "flagged": True}
+                "note": f"not a {cur or 'hospitality'} place — removed", "flagged": True}
     targets = [t for t in reclassify_targets(real) if t != cur]
     if len(targets) == 1:
         return {"action": "reclassify", "target": targets[0], "verdict": verdict, "reason": reason,
