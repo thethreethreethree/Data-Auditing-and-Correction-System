@@ -97,7 +97,7 @@ def run(infile, out, name):
     mode = detect_mode(rows)
     os.makedirs(out, exist_ok=True)
     tally = Counter()
-    corrected, flagged, suspects = [], [], []
+    corrected, flagged, suspects, uncertain = [], [], [], []
 
     for r in rows:
         if mode == "filed":
@@ -110,8 +110,8 @@ def run(infile, out, name):
                 flagged.append((r["Title"], claim, "remove", "", reason))
             elif action == "reclassify":
                 _set_cat(r, target); corrected.append(r); flagged.append((r["Title"], claim, "re-file", target, reason))
-            else:  # keep (flagged/review)
-                corrected.append(r); flagged.append((r["Title"], claim, "keep", "", reason))
+            else:  # keep (flagged/review) = uncertain
+                corrected.append(r); flagged.append((r["Title"], claim, "keep", "", reason)); uncertain.append((r, reason))
             tally[action] += 1
         else:  # industry-as-category
             d = decide_industry(r); action = d["action"]; claim = r["Industry"]
@@ -120,10 +120,10 @@ def run(infile, out, name):
             elif action == "reclassify":
                 r["Industry"] = d["target"]; corrected.append(r)
                 flagged.append((r["Title"], claim, "re-file", d["target"], d["reason"])); tally["reclassify"] += 1
-            else:  # suspect
+            else:  # suspect = uncertain
                 corrected.append(r)  # keep by default; flag for Claude
                 flagged.append((r["Title"], claim, "suspect", "", d["reason"]))
-                suspects.append(r); tally["suspect"] += 1
+                suspects.append(r); uncertain.append((r, d["reason"])); tally["suspect"] += 1
 
     # write files
     cf, cp = _open(os.path.join(out, f"{name}_corrected.csv"))
@@ -140,12 +140,19 @@ def run(infile, out, name):
         with sf:
             w = csv.writer(sf); w.writerow(["Title", "Claimed Category", "City", "Address", "Verdict (fill)"])
             for r in suspects: w.writerow([r["Title"], r["Industry"], r["City"], r["Address"], ""])
+    up = None
+    if uncertain:                                  # full data of every row the tool was unsure about
+        uf, up = _open(os.path.join(out, f"{name}_uncertain.csv"))
+        with uf:
+            w = csv.writer(uf); w.writerow(COLS + ["_Uncertain Reason"])
+            for r, why in uncertain: w.writerow([r[c] for c in COLS] + [why])
 
     report = [f"DACS report — {os.path.basename(infile)}", f"mode: {mode}", f"rows: {len(rows)}",
               "actions: " + ", ".join(f"{k}={v}" for k, v in tally.most_common()),
               f"corrected -> {os.path.basename(cp)} ({len(corrected)} rows)",
               f"flagged   -> {os.path.basename(fp)} ({len(flagged)} rows)"]
     if sp: report.append(f"suspects  -> {os.path.basename(sp)} ({len(suspects)} rows — agent classifies these)")
+    if up: report.append(f"uncertain -> {os.path.basename(up)} ({len(uncertain)} rows — full data the tool was unsure about)")
     rt = "\n".join(report)
     with open(os.path.join(out, f"{name}_report.txt"), "w", encoding="utf-8") as f:
         f.write(rt + "\n")

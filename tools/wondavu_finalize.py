@@ -35,7 +35,7 @@ def main():
                 except Exception: pass
 
     rows = load(ORIG)
-    corrected, flagged = [], []
+    corrected, flagged, uncertain = [], [], []
     tally = Counter(); src = Counter()
     for i, r in enumerate(rows):
         claim = r["Industry"]; mapped = dacs.INDUSTRY_TO_AMENITY.get(claim.strip().lower())
@@ -50,7 +50,8 @@ def main():
             if tt == "non-amenity":
                 flagged.append((r["Title"], claim, "remove", "", "agent: not a utility")); tally["remove"] += 1
             elif tt not in AMEN:   # uncertain / unknown -> keep as tagged
-                corrected.append(r); flagged.append((r["Title"], claim, "keep (uncertain)", "", "agent: uncertain")); tally["uncertain"] += 1
+                corrected.append(r); flagged.append((r["Title"], claim, "keep (uncertain)", "", "agent: uncertain"))
+                uncertain.append((r, "uncertain — kept as tagged")); tally["uncertain"] += 1
             elif tt == mapped:
                 corrected.append(r); tally["keep"] += 1
             else:
@@ -66,6 +67,10 @@ def main():
     with ff:
         w = csv.writer(ff); w.writerow(["Title", "Claimed", "Action", "Re-filed To", "Reason"])
         for rec in flagged: w.writerow(rec)
+    uf, up = _open(os.path.join(OUT, f"{NAME}_uncertain.csv"))
+    with uf:
+        w = csv.writer(uf); w.writerow(COLS + ["_Uncertain Reason"])
+        for r, why in uncertain: w.writerow([r[c] for c in COLS] + [why])
 
     # category mix after correction
     mix = Counter(r["Industry"].strip() for r in corrected)
@@ -73,7 +78,8 @@ def main():
            f"kept {tally['keep']} · re-filed {tally['reclassify']} · removed {tally['remove']} · uncertain-kept {tally['uncertain']}",
            f"  (re-files: {src['deterministic']} deterministic + {tally['reclassify']-src['deterministic']} from agent suspects)",
            f"corrected -> {os.path.basename(cp)} ({len(corrected)} rows)",
-           f"flagged   -> {os.path.basename(fp)} ({len(flagged)} rows)", "", "corrected category mix:"]
+           f"flagged   -> {os.path.basename(fp)} ({len(flagged)} rows)",
+           f"uncertain -> {os.path.basename(up)} ({len(uncertain)} rows — full data, kept as tagged)", "", "corrected category mix:"]
     for k, v in mix.most_common(): rep.append(f"   {k:18} {v}")
     txt = "\n".join(rep)
     open(os.path.join(OUT, f"{NAME}_report.txt"), "w", encoding="utf-8").write(txt + "\n")
