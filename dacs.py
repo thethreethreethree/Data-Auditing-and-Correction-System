@@ -15,7 +15,7 @@ Outputs (into --out, default = Desktop\\Corrected Data):
   <name>_suspects.csv    rows the deterministic pass couldn't decide -> Claude classifies these
   <name>_report.txt      summary
 """
-import argparse, csv, os, sys
+import argparse, csv, os, re, sys
 from collections import Counter
 
 sys.path.insert(0, os.path.join(os.path.dirname(os.path.abspath(__file__)), "tools"))
@@ -45,9 +45,10 @@ CONFIRM = {
              "cooperative bank","network bank"],
     "gas station": ["petron","shell","caltex","phoenix","seaoil","gas","petrol","fuel","gasoline","flying v",
                     "unioil","total","jetti","filling station"],
-    "medical clinic": ["clinic","medical","health center","health unit","hospital","diagnostic","doctor","dental",
-                       "dentist","birthing","lying-in","lying in","rhu","infirmary","polyclinic","optical",
-                       "eye center","maternity","laboratory","wellness clinic"],
+    "medical clinic": ["clinic","medical","health center","health unit","health office","hospital","diagnostic","doctor",
+                       "dental","dentist","birthing","lying-in","lying in","rhu","infirmary","polyclinic","optical",
+                       "eye center","maternity","laboratory","wellness clinic","hiv","aids","treatment","dialysis",
+                       "hemodialysis","renal","derma","dermatology","reproductive","care facility","drop-in","therapy"],
     "massage spa": ["spa","massage","wellness","beauty","salon","nail"],
     "scooter rental": ["rental","motorbike","scooter","bike rental","rent a","motor rental","moto rental"],
     "gym": ["gym","fitness","crossfit"],
@@ -58,6 +59,8 @@ CONFIRM = {
     "sim card": ["sim","globe","smart","dito","telecom","load station","cellphone"],
     "coworking space": ["coworking","co-working","shared office","workspace","co work"],
 }
+# match keywords as WHOLE WORDS — "atm" must not match inside "treatment", "spa" inside "space", etc.
+CONFIRM_RE = {c: re.compile(r"\b(?:" + "|".join(re.escape(k) for k in kws) + r")\b") for c, kws in CONFIRM.items()}
 
 
 def detect_mode(rows):
@@ -73,7 +76,7 @@ def decide_industry(row):
     name = row["Title"].lower()
     if cat is None:
         return {"action": "suspect", "target": None, "reason": f"unmapped category '{row['Industry']}'"}
-    matches = [c for c in CONFIRM if any(kw in name for kw in CONFIRM[c])]
+    matches = [c for c in CONFIRM_RE if CONFIRM_RE[c].search(name)]
     if cat in matches:
         return {"action": "keep", "target": cat, "reason": f"name confirms {cat}"}
     if len(matches) == 1:
