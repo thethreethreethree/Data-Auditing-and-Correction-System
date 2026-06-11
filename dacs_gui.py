@@ -6,7 +6,7 @@ green kept, blue updated/re-filed, red rejected, amber uncertain — with summar
 and one-click access to the output folder. Processing runs on a worker thread so the UI
 stays responsive. Same engine as dacs.py.
 """
-import os, sys, threading, queue
+import os, sys, csv, threading, queue
 import tkinter as tk
 from tkinter import ttk, filedialog, messagebox
 
@@ -25,7 +25,9 @@ class App:
         self.root = root
         self.q = queue.Queue()
         self.results = []
+        self.rows = []
         self.files = {}
+        self.name = "audit"
         self.filt = tk.StringVar(value="changed")
         root.title("DACS — Data Auditing & Correction System")
         root.configure(bg=BG)
@@ -104,17 +106,21 @@ class App:
                            bg=PANEL2, fg=INK, selectcolor=ACC, indicatoron=False, relief="flat", bd=0,
                            padx=12, pady=5, font=("Segoe UI", 9), activebackground=PANEL2,
                            cursor="hand2").pack(side="left", padx=3)
+        self.export_btn = self._btn(fr, "⤓  Export reviewed CSV", self.export_reviewed, bg=OK, fg="#04140a")
+        self.export_btn.pack(side="right", padx=4); self.export_btn.config(state="disabled")
         self.count_lbl = self._lbl(fr, "", fg=MUT, font=("Segoe UI", 9)); self.count_lbl.pack(side="left", padx=12)
 
         # table
         wrap = tk.Frame(self.root, bg=LINE); wrap.pack(fill="both", expand=True, padx=20, pady=(0, 8))
-        cols = ("title", "tagged", "action", "new", "reason")
+        cols = ("title", "tagged", "action", "new", "reason", "verdict")
         self.tree = ttk.Treeview(wrap, columns=cols, show="headings", selectmode="browse")
-        for c, txt, w in [("title", "Place", 300), ("tagged", "Tagged as", 150), ("action", "Result", 110),
-                          ("new", "Changed to", 150), ("reason", "Why", 320)]:
+        for c, txt, w in [("title", "Place", 270), ("tagged", "Tagged as", 120), ("action", "Result", 95),
+                          ("new", "Changed to", 130), ("reason", "Why", 250), ("verdict", "Verdict ✎ (double-click)", 180)]:
             self.tree.heading(c, text=txt); self.tree.column(c, width=w, anchor="w")
         for a, col in COLOR.items():
             self.tree.tag_configure(a, foreground=col)
+        self.tree.tag_configure("hasverdict", background="#10261a")
+        self.tree.bind("<Double-1>", self._edit_cell)
         vs = ttk.Scrollbar(wrap, orient="vertical", command=self.tree.yview)
         self.tree.configure(yscrollcommand=vs.set)
         self.tree.pack(side="left", fill="both", expand=True); vs.pack(side="right", fill="y")
@@ -139,8 +145,8 @@ class App:
         if not infile or not os.path.isfile(infile):
             messagebox.showwarning("DACS", "Pick a valid CSV file first."); return
         out = self.out_var.get().strip() or dacs.DEFAULT_OUT
-        name = os.path.splitext(os.path.basename(infile))[0]
-        self.run_btn.config(state="disabled"); self.open_btn.config(state="disabled")
+        name = os.path.splitext(os.path.basename(infile))[0]; self.name = name
+        self.run_btn.config(state="disabled"); self.open_btn.config(state="disabled"); self.export_btn.config(state="disabled")
         self.tree.delete(*self.tree.get_children())
         for k in self.card: self.card[k].config(text="—")
         self.pb["value"] = 0; self.status.config(text="Loading…", fg=MUT)
@@ -170,7 +176,8 @@ class App:
         self.root.after(40, self._poll)
 
     def _done(self, res):
-        self.results = res["results"]; self.files = res["files"]; s = res["summary"]
+        self.results = res["results"]; self.rows = res.get("rows", []); self.files = res["files"]; s = res["summary"]
+        for r in self.results: r.setdefault("verdict", "")
         self.card["total"].config(text=f"{res['total']:,}")
         for k in ("kept", "updated", "rejected", "uncertain"):
             self.card[k].config(text=f"{s.get(k, 0):,}")
@@ -179,18 +186,20 @@ class App:
         self.populate()
         outdir = os.path.dirname(self.files.get("corrected", ""))
         self.sb_lbl.config(text="Saved to:  " + outdir)
-        self.run_btn.config(state="normal"); self.open_btn.config(state="normal")
+        self.run_btn.config(state="normal"); self.open_btn.config(state="normal"); self.export_btn.config(state="normal")
 
     def populate(self):
         self.tree.delete(*self.tree.get_children())
         f = self.filt.get()
         keep = {"changed": {"updated", "rejected", "uncertain"}, "all": None}.get(f, {f})
         shown = 0
-        for r in self.results:
+        for idx, r in enumerate(self.results):
             if keep is not None and r["action"] not in keep:
                 continue
-            self.tree.insert("", "end", tags=(r["action"],),
-                             values=(r["title"][:70], r["tagged"], LABEL[r["action"]], r["new"], r["reason"]))
+            v = r.get("verdict", "")
+            tags = (r["action"],) + (("hasverdict",) if v else ())
+            self.tree.insert("", "end", iid=str(idx), tags=tags,
+                             values=(r["title"][:70], r["tagged"], LABEL[r["action"]], r["new"], r["reason"], v))
             shown += 1
             if shown >= 4000:  # cap UI rows for responsiveness
                 break
@@ -202,6 +211,49 @@ class App:
         if os.path.isdir(d):
             try: os.startfile(d)
             except Exception: pass
+
+    def _edit_cell(self, event):
+        if self.tree.identify_region(event.x, event.y) != "cell":
+            return
+        if self.tree.identify_column(event.x) != "#6":          # only the Verdict column
+            return
+        item = self.tree.identify_row(event.y)
+        if not item:
+            return
+        x, y, w, h = self.tree.bbox(item, "#6")
+        ed = tk.Entry(self.tree, bg=PANEL2, fg=INK, insertbackground=INK, relief="flat", font=("Segoe UI", 10))
+        ed.insert(0, self.tree.set(item, "verdict")); ed.select_range(0, "end"); ed.focus_set()
+        ed.place(x=x, y=y, width=w, height=h)
+
+        def save(_=None):
+            v = ed.get().strip()
+            self.tree.set(item, "verdict", v)
+            base = self.results[int(item)]["action"]
+            self.tree.item(item, tags=(base,) + (("hasverdict",) if v else ()))
+            try: self.results[int(item)]["verdict"] = v
+            except Exception: pass
+            ed.destroy()
+        ed.bind("<Return>", save); ed.bind("<FocusOut>", save); ed.bind("<Escape>", lambda e: ed.destroy())
+
+    def export_reviewed(self):
+        if not self.results:
+            messagebox.showinfo("DACS", "Run an audit first."); return
+        outdir = os.path.dirname(self.files.get("corrected", "")) or self.out_var.get()
+        path = filedialog.asksaveasfilename(initialdir=outdir, initialfile=self.name + "_reviewed.csv",
+                                            defaultextension=".csv", filetypes=[("CSV", "*.csv")])
+        if not path:
+            return
+        cols, extra = dacs.COLS, ["Audit Result", "Changed To", "Why", "Verdict"]
+        try:
+            with open(path, "w", encoding="utf-8-sig", newline="") as f:
+                w = csv.writer(f); w.writerow(cols + extra)
+                for i, r in enumerate(self.results):
+                    row = self.rows[i] if i < len(self.rows) else {}
+                    w.writerow([row.get(c, "") for c in cols]
+                               + [LABEL[r["action"]], r["new"], r["reason"], r.get("verdict", "")])
+            messagebox.showinfo("DACS", f"Exported {len(self.results):,} rows (with your verdicts) to:\n{os.path.basename(path)}")
+        except PermissionError:
+            messagebox.showerror("DACS", "That file is open in another program. Close it and try again.")
 
 
 def main():

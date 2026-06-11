@@ -160,7 +160,7 @@ def process(infile, out, name, progress=None):
     rp = os.path.join(out, f"{name}_report.txt")
     with open(rp, "w", encoding="utf-8") as f: f.write("\n".join(rep) + "\n")
     files["report"] = rp
-    return {"mode": mode, "total": total, "results": results, "summary": dict(tally), "files": files}
+    return {"mode": mode, "total": total, "results": results, "summary": dict(tally), "files": files, "rows": rows}
 
 
 def run(infile, out, name):
