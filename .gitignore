@@ -1,0 +1,7 @@
+# Python
+__pycache__/
+*.pyc
+
+# Scraped place data + generated audit outputs — run locally; keep the public repo code-only.
+# (The pipeline reads these from your machine; they are not the deliverable, the code is.)
+data/*.csv
